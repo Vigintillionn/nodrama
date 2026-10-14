@@ -77,12 +77,12 @@ let escape_special_char = function
   | _ -> None
 
 let char_code input start stop = function
-  | Some n when 0 <= n && n <= 256 -> Ok (Char.chr n, stop)
+  | Some n when 0 <= n && n < 256 -> Ok (Char.chr n, stop)
   | Some _ | None -> error input start stop "character code must be below 256"
 
 let escape input i = function
   | 'x' ->
-      let stop = skip is_hex input (i + 1) in
+      let stop = skip is_hex input (i + 2) in
       if stop = i + 2 then
         error input i stop "`\\x` needs at least one hex digit"
       else
