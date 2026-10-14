@@ -163,3 +163,16 @@ let lines source =
         in
         Some (line { source; text; stop } start, stop + 1))
     0
+
+let pp_kind ppf = function
+  | Ident name -> Format.fprintf ppf "identifier `%s`" name
+  | Int n -> Format.fprintf ppf "number `%d`" n
+  | String s -> Format.fprintf ppf "string `%S`" s
+  | Comma -> Format.fprintf ppf "`,`"
+  | Semicolon -> Format.fprintf ppf "`;`"
+  | Colon -> Format.fprintf ppf "`:`"
+  | LParen -> Format.fprintf ppf "`(`"
+  | RParen -> Format.fprintf ppf "`)`"
+  | Plus -> Format.fprintf ppf "`+`"
+  | Minus -> Format.fprintf ppf "`-`"
+  | Star -> Format.fprintf ppf "`*`"
