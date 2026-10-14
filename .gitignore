@@ -1,0 +1,15 @@
+# dune / opam
+_build/
+_opam/
+*.install
+
+# object files and binaries from manual RISC-V builds
+*.o
+*.elf
+
+# editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
