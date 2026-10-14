@@ -44,7 +44,10 @@ let print_tokens source =
 
 let compile options =
   let* source = read_source options.input in
-  if options.tokens then print_tokens source else Ok ()
+  if options.tokens then print_tokens source
+  else
+    let* _lines = Lexer.lines source |> Parser.parse in
+    Ok ()
 
 let () =
   match parse_args () with
