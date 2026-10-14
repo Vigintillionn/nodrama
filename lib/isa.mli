@@ -27,21 +27,21 @@ module Cond : sig
   type t = NUL | NNUL | POS | NPOS | NEG | NNEG | OVL | GOVL | SO | GSO
 end
 
-type operand = { n : int; index : Index.t }
-(** [n] is raw 4-digit operand field 0 to 9999 *)
+type 'n operand = { n : 'n; index : Index.t }
+(** [n] is raw 4-digit operand field 0 to 9999 once assembled *)
 
-type instr =
-  | HIA of Reg.t * Mode.t * operand
-  | OPT of Reg.t * Mode.t * operand
-  | AFT of Reg.t * Mode.t * operand
-  | VER of Reg.t * Mode.t * operand
-  | DEL of Reg.t * Mode.t * operand
-  | MOD of Reg.t * Mode.t * operand
-  | VGL of Reg.t * Mode.t * operand
-  | BIG of Reg.t * Target.t * operand
-  | SPR of Target.t * operand
-  | VSP of Cond.t * Target.t * operand
-  | SBR of Target.t * operand
+type 'n instr =
+  | HIA of Reg.t * Mode.t * 'n operand
+  | OPT of Reg.t * Mode.t * 'n operand
+  | AFT of Reg.t * Mode.t * 'n operand
+  | VER of Reg.t * Mode.t * 'n operand
+  | DEL of Reg.t * Mode.t * 'n operand
+  | MOD of Reg.t * Mode.t * 'n operand
+  | VGL of Reg.t * Mode.t * 'n operand
+  | BIG of Reg.t * Target.t * 'n operand
+  | SPR of Target.t * 'n operand
+  | VSP of Cond.t * Target.t * 'n operand
+  | SBR of Target.t * 'n operand
   | KTG
   | LEZ
   | DRU
