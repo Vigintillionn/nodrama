@@ -1,0 +1,13 @@
+| Adds up the numbers in TABLE and prints the total (145).
+
+        HIA.w   R0, 0           | R0 = total
+        HIA.w   R1, 0           | R1 = index
+LOOP:   VGL.w   R1, 5
+        VSP     GEL, DONE
+        OPT     R0, TABLE(R1+)  | total += TABLE[index++]
+        SPR     LOOP
+DONE:   DRU
+        NWL@
+        STP
+
+TABLE:  12; -4; 30; 7; 100

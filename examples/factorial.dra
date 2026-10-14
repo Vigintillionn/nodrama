@@ -1,0 +1,26 @@
+| Prints n! for n = 0 to 10, using a recursive subroutine.
+
+        HIA.w   R2, 0           | R2 = n
+LOOP:   HIA     R1, R2
+        SBR     FACT            | R0 = R1!
+        DRU
+        NWL
+        OPT.w   R2, 1
+        VGL.w   R2, 11
+        VSP     KL, LOOP
+        STP
+
+| FACT: R0 = R1!, preserves R1.
+FACT:   VGL.w   R1, 1
+        VSP     GR, RECURSE
+        HIA.w   R0, 1
+        KTG
+RECURSE:
+        BST     R1
+        AFT.w   R1, 1
+        SBR     FACT            | R0 = (n - 1)!
+        HST     R1
+        VER     R0, R1
+        KTG
+
+        EINDPR

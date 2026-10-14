@@ -1,0 +1,10 @@
+| Prints two packed strings with DRS.
+
+        HIA.a   R0, GREETING    | R0 = address of the string
+        DRS
+        HIA.a   R0, QUOTE
+        DRS
+        STP
+
+GREETING: "Hello, DRAMA!\n"
+QUOTE:  "\tsays \"hoi\" | not a comment\n"
