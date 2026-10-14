@@ -8,3 +8,6 @@ let make source ~start ~stop =
 let source t = t.source
 let start t = t.start
 let stop t = t.stop
+
+let merge a b =
+  make a.source ~start:(min a.start b.start) ~stop:(max a.stop b.stop)
