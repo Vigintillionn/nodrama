@@ -2,22 +2,25 @@ open Nodrama
 
 let ( let* ) = Result.bind
 
-type options = { input : string; tokens : bool }
+type dump = Tokens | Ast
+type options = { input : string; dump : dump option }
 
-let usage = "Usage: nodrama <input>"
+let usage = "Usage: nodrama [--tokens| --ast] <input>"
 
 let parse_args () =
   let inputs = ref [] in
-  let tokens = ref false in
+  let dump = ref None in
+  let set value = Arg.Unit (fun () -> dump := Some value) in
   let specs =
     Arg.align
       [
-        ("--tokens", Arg.Set tokens, " Print the tokens of each line and stop");
+        ("--tokens", set Tokens, " Print the tokens of each line and stop");
+        ("--ast", set Ast, " Print the parsed program and stop");
       ]
   in
   Arg.parse specs (fun path -> inputs := path :: !inputs) usage;
   match !inputs with
-  | [ input ] -> Ok { input; tokens = !tokens }
+  | [ input ] -> Ok { input; dump = !dump }
   | [] -> Error "no input file"
   | _ -> Error "expected exactly one input file"
 
@@ -42,12 +45,14 @@ let print_tokens source =
     lines;
   match errors with [] -> Ok () | _ :: _ -> Error errors
 
-let compile options =
-  let* source = read_source options.input in
-  if options.tokens then print_tokens source
-  else
-    let* _lines = Lexer.lines source |> Parser.parse in
-    Ok ()
+let print_ast lines = List.iter (Format.printf "%a@." Ast.pp_line) lines
+
+let compile { input; dump } =
+  let* source = read_source input in
+  match dump with
+  | Some Tokens -> print_tokens source
+  | Some Ast -> Lexer.lines source |> Parser.parse |> Result.map print_ast
+  | None -> Lexer.lines source |> Parser.parse |> Result.map ignore
 
 let () =
   match parse_args () with
