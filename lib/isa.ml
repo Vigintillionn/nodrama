@@ -112,7 +112,7 @@ let pp pp_n ppf instr =
     Format.fprintf ppf "%a%a" pp_n n pp_index index
   in
   let class1 name r mode o =
-    Format.fprintf ppf "%s%a %a, %a" name pp_reg r pp_mode mode operand o
+    Format.fprintf ppf "%s%a %a, %a" name pp_mode mode pp_reg r operand o
   in
   match instr with
   | HIA (r, mode, o) -> class1 "HIA" r mode o
