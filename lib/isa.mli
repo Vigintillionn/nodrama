@@ -49,3 +49,7 @@ type 'n instr =
   | NWL
   | NTS
   | STP
+
+val pp :
+  (Format.formatter -> 'n -> unit) -> Format.formatter -> 'n instr -> unit
+(** Prints DRAMA source with the mode spelled out, e.g. [HIA.w R1, 0(R2+)]. *)

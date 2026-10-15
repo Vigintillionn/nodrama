@@ -70,3 +70,68 @@ type 'n instr =
   | NWL
   | NTS
   | STP
+
+let pp_reg ppf r = Format.fprintf ppf "R%d" (Reg.to_int r)
+
+let pp_mode ppf (mode : Mode.t) =
+  Format.pp_print_string ppf
+    (match mode with
+    | Value -> ".w"
+    | Address -> ".a"
+    | Direct -> ".d"
+    | Indirect -> ".i")
+
+let pp_target ppf (target : Target.t) =
+  Format.pp_print_string ppf
+    (match target with Direct -> ".d" | Indirect -> ".i")
+
+let pp_cond ppf (cond : Cond.t) =
+  Format.pp_print_string ppf
+    (match cond with
+    | NUL -> "NUL"
+    | NNUL -> "NNUL"
+    | POS -> "POS"
+    | NPOS -> "NPOS"
+    | NEG -> "NEG"
+    | NNEG -> "NNEG"
+    | OVL -> "OVL"
+    | GOVL -> "GOVL"
+    | SO -> "SO"
+    | GSO -> "GSO")
+
+let pp_index ppf : Index.t -> unit = function
+  | Unindexed -> ()
+  | Indexed r -> Format.fprintf ppf "(%a)" pp_reg r
+  | Pre_inc r -> Format.fprintf ppf "(+%a)" pp_reg r
+  | Post_inc r -> Format.fprintf ppf "(%a+)" pp_reg r
+  | Pre_dec r -> Format.fprintf ppf "(-%a)" pp_reg r
+  | Post_dec r -> Format.fprintf ppf "(%a-)" pp_reg r
+
+let pp pp_n ppf instr =
+  let operand ppf { n; index } =
+    Format.fprintf ppf "%a%a" pp_n n pp_index index
+  in
+  let class1 name r mode o =
+    Format.fprintf ppf "%s%a %a, %a" name pp_reg r pp_mode mode operand o
+  in
+  match instr with
+  | HIA (r, mode, o) -> class1 "HIA" r mode o
+  | OPT (r, mode, o) -> class1 "OPT" r mode o
+  | AFT (r, mode, o) -> class1 "AFT" r mode o
+  | VER (r, mode, o) -> class1 "VER" r mode o
+  | DEL (r, mode, o) -> class1 "DEL" r mode o
+  | MOD (r, mode, o) -> class1 "MOD" r mode o
+  | VGL (r, mode, o) -> class1 "VGL" r mode o
+  | BIG (r, t, o) ->
+      Format.fprintf ppf "BIG%a %a, %a" pp_target t pp_reg r operand o
+  | SPR (t, o) -> Format.fprintf ppf "SPR%a %a" pp_target t operand o
+  | SBR (t, o) -> Format.fprintf ppf "SBR%a %a" pp_target t operand o
+  | VSP (c, t, o) ->
+      Format.fprintf ppf "VSP%a %a, %a" pp_cond c pp_target t operand o
+  | KTG -> Format.pp_print_string ppf "KTG"
+  | LEZ -> Format.pp_print_string ppf "LEZ"
+  | DRU -> Format.pp_print_string ppf "DRU"
+  | DRS -> Format.pp_print_string ppf "DRS"
+  | NWL -> Format.pp_print_string ppf "NWL"
+  | NTS -> Format.pp_print_string ppf "NTS"
+  | STP -> Format.pp_print_string ppf "STP"

@@ -1,6 +1,8 @@
 type ident = { name : string; span : Span.t }
 (** [name] is folded to upper case *)
+
 type sign = Add | Sub
+
 type expr = { const : int; symbol : (sign * ident) option; span : Span.t }
 (** [const + symbol] or [const - symbol] *)
 
@@ -17,3 +19,7 @@ type line = {
   statement : statement option;
   span : Span.t;
 }
+
+val pp_line : Format.formatter -> line -> unit
+(** Prints the line as normalised DRAMA source that parses back to the same
+    line. *)
