@@ -127,7 +127,7 @@ let pp pp_n ppf instr =
   | SPR (t, o) -> Format.fprintf ppf "SPR%a %a" pp_target t operand o
   | SBR (t, o) -> Format.fprintf ppf "SBR%a %a" pp_target t operand o
   | VSP (c, t, o) ->
-      Format.fprintf ppf "VSP%a %a, %a" pp_cond c pp_target t operand o
+      Format.fprintf ppf "VSP%a %a, %a" pp_target t pp_cond c operand o
   | KTG -> Format.pp_print_string ppf "KTG"
   | LEZ -> Format.pp_print_string ppf "LEZ"
   | DRU -> Format.pp_print_string ppf "DRU"
