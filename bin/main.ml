@@ -2,10 +2,10 @@ open Nodrama
 
 let ( let* ) = Result.bind
 
-type dump = Tokens | Ast
+type dump = Tokens | Ast | Image
 type options = { input : string; dump : dump option }
 
-let usage = "Usage: nodrama [--tokens| --ast] <input>"
+let usage = "Usage: nodrama [--tokens| --ast| --image] <input>"
 
 let parse_args () =
   let inputs = ref [] in
@@ -16,6 +16,7 @@ let parse_args () =
       [
         ("--tokens", set Tokens, " Print the tokens of each line and stop");
         ("--ast", set Ast, " Print the parsed program and stop");
+        ("--image", set Image, " Print the assembled image and stop");
       ]
   in
   Arg.parse specs (fun path -> inputs := path :: !inputs) usage;
@@ -47,12 +48,32 @@ let print_tokens source =
 
 let print_ast lines = List.iter (Format.printf "%a@." Ast.pp_line) lines
 
+let print_word image address =
+  let word = Assembler.word image address in
+  match Encoding.decode word with
+  | Some instr ->
+      Format.printf "%04d  %010d  %a@." address word
+        (Isa.pp Format.pp_print_int)
+        instr
+  | None -> Format.printf "%04d  %010d@." address word
+
+let print_image image =
+  List.iter
+    (fun (name, address) -> Format.printf "%-12s %04d@." name address)
+    (Assembler.symbols image);
+  List.init (Assembler.size image) Fun.id |> List.iter (print_word image)
+
 let compile { input; dump } =
   let* source = read_source input in
   match dump with
   | Some Tokens -> print_tokens source
   | Some Ast -> Lexer.lines source |> Parser.parse |> Result.map print_ast
-  | None -> Lexer.lines source |> Parser.parse |> Result.map ignore
+  | Some Image ->
+      let* lines = Lexer.lines source |> Parser.parse in
+      Assembler.assemble lines |> Result.map print_image
+  | None ->
+      let* lines = Lexer.lines source |> Parser.parse in
+      Assembler.assemble lines |> Result.map ignore
 
 let () =
   match parse_args () with
