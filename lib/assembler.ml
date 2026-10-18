@@ -175,19 +175,20 @@ let item symbols : Ast.item -> (int list, Diagnostic.t) result = function
       [ word ]
   | Text s -> Ok (text_words s)
 
-let rec sequence = function
-  | [] -> Ok []
-  | result :: rest ->
-      let* x = result in
-      let+ xs = sequence rest in
-      x :: xs
+let all results =
+  let either = function Ok x -> Either.Left x | Error e -> Either.Right e in
+  match List.partition_map either results with
+  | values, [] -> Ok values
+  | _, errors -> Error errors
 
-let words symbols : Ast.statement -> (int list, Diagnostic.t) result = function
+let words symbols : Ast.statement -> (int list, Diagnostic.t list) result =
+  function
   | Instr i ->
-      let+ i = instr symbols i in
-      [ Encoding.encode i ]
+      instr symbols i
+      |> Result.map (fun i -> [ Encoding.encode i ])
+      |> Result.map_error List.singleton
   | Data items ->
-      let+ words = List.map (item symbols) items |> sequence in
+      let+ words = List.map (item symbols) items |> all in
       List.concat words
   | Resgr _ | Eindpr -> Ok []
 
@@ -210,15 +211,16 @@ let build layout blocks =
 
 let assemble lines =
   let layout = layout lines in
+  let placed = if layout.next > memory_size then [] else layout.placed in
   let blocks, errors =
     List.partition_map
       (fun (address, statement) ->
         match words layout.symbols statement with
         | Ok block -> Either.Left (address, block)
-        | Error e -> Either.Right e)
-      layout.placed
+        | Error errors -> Either.Right errors)
+      placed
   in
-  match List.stable_sort by_position (layout.errors @ errors) with
+  match List.stable_sort by_position (layout.errors @ List.concat errors) with
   | _ :: _ as errors -> Error errors
   | [] when layout.next = 0 ->
       Error

@@ -8,7 +8,8 @@ val size : t -> int
 
 val word : t -> int -> int
 (** [word t address] is the word at [address] as 10 digits read unsigned. Words
-    past [size t] are 0 *)
+    past [size t] are 0. Raises [Invalid_argument] unless
+    [0 <= address < memory_size] *)
 
 val symbols : t -> (string * int) list
 (** labels and their addresses sorted by name *)
