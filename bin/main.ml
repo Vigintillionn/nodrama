@@ -3,12 +3,13 @@ open Nodrama
 let ( let* ) = Result.bind
 
 type dump = Tokens | Ast | Image
-type options = { input : string; dump : dump option }
+type options = { input : string; dump : dump option; output : string option }
 
-let usage = "Usage: nodrama [--tokens| --ast| --image] <input>"
+let usage = "Usage: nodrama [--tokens| --ast| --image] [-o <output>] <input>"
 
 let parse_args () =
   let inputs = ref [] in
+  let output = ref None in
   let dump = ref None in
   let set value = Arg.Unit (fun () -> dump := Some value) in
   let specs =
@@ -17,11 +18,14 @@ let parse_args () =
         ("--tokens", set Tokens, " Print the tokens of each line and stop");
         ("--ast", set Ast, " Print the parsed program and stop");
         ("--image", set Image, " Print the assembled image and stop");
+        ( "-o",
+          Arg.String (fun path -> output := Some path),
+          "<file> Write the assembly to <file> instead of stdout" );
       ]
   in
   Arg.parse specs (fun path -> inputs := path :: !inputs) usage;
   match !inputs with
-  | [ input ] -> Ok { input; dump = !dump }
+  | [ input ] -> Ok { input; dump = !dump; output = !output }
   | [] -> Error "no input file"
   | _ -> Error "expected exactly one input file"
 
@@ -63,7 +67,20 @@ let print_image image =
     (Assembler.symbols image);
   List.init (Assembler.size image) Fun.id |> List.iter (print_word image)
 
-let compile { input; dump } =
+let write output image =
+  let emit ppf = Format.fprintf ppf "%a@?" Emit.program image in
+  match output with
+  | None -> Ok (emit Format.std_formatter)
+  | Some path -> (
+      match Out_channel.open_text path with
+      | exception Sys_error reason ->
+          Error [ Diagnostic.error "cannot write %s: %s" path reason ]
+      | oc ->
+          Fun.protect
+            ~finally:(fun () -> Out_channel.close oc)
+            (fun () -> Ok (emit (Format.formatter_of_out_channel oc))))
+
+let compile { input; output; dump } =
   let* source = read_source input in
   match dump with
   | Some Tokens -> print_tokens source
@@ -73,7 +90,8 @@ let compile { input; dump } =
       Assembler.assemble lines |> Result.map print_image
   | None ->
       let* lines = Lexer.lines source |> Parser.parse in
-      Assembler.assemble lines |> Result.map ignore
+      let* image = Assembler.assemble lines in
+      write output image
 
 let () =
   match parse_args () with
