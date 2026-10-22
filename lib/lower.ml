@@ -173,6 +173,12 @@ let instr ~is_code ~addr = function
   | NTS -> []
   | STP -> [ Call Stp ]
 
+let falls_through = function
+  | SPR _ | SBR _ | KTG | STP -> false
+  | HIA _ | OPT _ | AFT _ | VER _ | DEL _ | MOD _ | VGL _ | BIG _ | VSP _ | LEZ
+  | DRU | DRS | NWL | NTS ->
+      true
+
 let decode image addr = Encoding.decode (Assembler.word image addr)
 let is_code image addr = Option.is_some (decode image addr)
 
@@ -190,6 +196,6 @@ let program image =
         Label (Word addr)
         :: Comment (Format.asprintf "%a" (Isa.pp Format.pp_print_int) i)
         :: instr ~is_code ~addr i
-        @ fall_into (addr + 1)
+        @ if falls_through i then fall_into (addr + 1) else []
   in
   fall_into 0 @ (List.init size Fun.id |> List.concat_map word)
