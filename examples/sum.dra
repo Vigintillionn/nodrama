@@ -7,7 +7,7 @@ LOOP:   VGL.w   R1, 5
         OPT     R0, TABLE(R1+)  | total += TABLE[index++]
         SPR     LOOP
 DONE:   DRU
-        NWL@
+        NWL
         STP
 
 TABLE:  12; -4; 30; 7; 100
