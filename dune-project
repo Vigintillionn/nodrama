@@ -19,7 +19,10 @@
  (name nodrama)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml)
+ (depends
+  ocaml
+  (cmdliner
+   (>= 2.0.0)))
  (tags
   ("add topics" "to describe" your project)))
 

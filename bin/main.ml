@@ -1,33 +1,9 @@
 open Nodrama
+open Cmdliner
 
 let ( let* ) = Result.bind
 
-type dump = Tokens | Ast | Image
-type options = { input : string; dump : dump option; output : string option }
-
-let usage = "Usage: nodrama [--tokens| --ast| --image] [-o <output>] <input>"
-
-let parse_args () =
-  let inputs = ref [] in
-  let output = ref None in
-  let dump = ref None in
-  let set value = Arg.Unit (fun () -> dump := Some value) in
-  let specs =
-    Arg.align
-      [
-        ("--tokens", set Tokens, " Print the tokens of each line and stop");
-        ("--ast", set Ast, " Print the parsed program and stop");
-        ("--image", set Image, " Print the assembled image and stop");
-        ( "-o",
-          Arg.String (fun path -> output := Some path),
-          "<file> Write the assembly to <file> instead of stdout" );
-      ]
-  in
-  Arg.parse specs (fun path -> inputs := path :: !inputs) usage;
-  match !inputs with
-  | [ input ] -> Ok { input; dump = !dump; output = !output }
-  | [] -> Error "no input file"
-  | _ -> Error "expected exactly one input file"
+type stage = Tokens | Ast | Image | Asm
 
 let read_source path =
   Source.read_file path
@@ -80,27 +56,55 @@ let write output image =
             ~finally:(fun () -> Out_channel.close oc)
             (fun () -> Ok (emit (Format.formatter_of_out_channel oc))))
 
-let compile { input; output; dump } =
+let compile ~stage ~output input =
   let* source = read_source input in
-  match dump with
-  | Some Tokens -> print_tokens source
-  | Some Ast -> Lexer.lines source |> Parser.parse |> Result.map print_ast
-  | Some Image ->
+  match stage with
+  | Tokens -> print_tokens source
+  | Ast -> Lexer.lines source |> Parser.parse |> Result.map print_ast
+  | Image ->
       let* lines = Lexer.lines source |> Parser.parse in
       Assembler.assemble lines |> Result.map print_image
-  | None ->
+  | Asm ->
       let* lines = Lexer.lines source |> Parser.parse in
       let* image = Assembler.assemble lines in
       write output image
 
-let () =
-  match parse_args () with
-  | Error message ->
-      Printf.eprintf "nodrama: %s\n%s\n" message usage;
-      exit 2
-  | Ok options -> (
-      match compile options with
-      | Ok () -> exit 0
-      | Error diagnostics ->
-          List.iter (Format.eprintf "%a@." Diagnostic.pp) diagnostics;
-          exit 1)
+let exit_diagnostics = 1
+
+let run stage output input =
+  match compile ~stage ~output input with
+  | Ok () -> Cmd.Exit.ok
+  | Error diagnostics ->
+      List.iter (Format.eprintf "%a@." Diagnostic.pp) diagnostics;
+      exit_diagnostics
+
+let stage =
+  let stop_after name doc = Arg.info [ name ] ~doc in
+  Arg.(
+    value
+    & vflag Asm
+        [
+          (Tokens, stop_after "tokens" "Print the tokens of each line and stop.");
+          (Ast, stop_after "ast" "Print the parsed program and stop.");
+          (Image, stop_after "image" "Print the assembled image and stop.");
+        ])
+
+let output =
+  let doc = "Write the assembly to $(docv) instead of stdout." in
+  Arg.(value & opt (some filepath) None & info [ "o" ] ~docv:"FILE" ~doc)
+
+let input =
+  let doc = "The DRAMA source file." in
+  Arg.(required & pos 0 (some filepath) None & info [] ~docv:"FILE" ~doc)
+
+let cmd =
+  let doc = "compile DRAMA to RISC-V assembly" in
+  let exits =
+    Cmd.Exit.info exit_diagnostics ~doc:"on compilation errors."
+    :: Cmd.Exit.defaults
+  in
+  Cmd.make
+    (Cmd.info "nodrama" ~doc ~exits)
+    Term.(const run $ stage $ output $ input)
+
+let () = exit (Cmd.eval' cmd)

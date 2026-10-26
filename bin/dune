@@ -1,4 +1,4 @@
 (executable
  (public_name nodrama)
  (name main)
- (libraries nodrama))
+ (libraries nodrama cmdliner))
