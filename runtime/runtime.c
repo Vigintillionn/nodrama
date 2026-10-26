@@ -141,7 +141,7 @@ int64_t __drama_lez(void)
         fatal("Ongeldige invoer", 0);
 
     int64_t v = 0;
-    int too_big = 1;
+    int too_big = 0;
     for (; is_digit(c); c = next_byte())
     {
         if (v > (INT64_MAX - 9) / 10)
