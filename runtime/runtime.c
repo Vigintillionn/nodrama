@@ -98,7 +98,7 @@ static int next_byte(void)
     if (in_pos == in_len)
     {
         long n = __sys_read(STDIN, in_buf, sizeof in_buf);
-        if (n < 0)
+        if (n <= 0)
             return -1;
         in_pos = 0;
         in_len = (size_t)n;
