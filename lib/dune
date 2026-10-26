@@ -1,2 +1,11 @@
 (library
- (name nodrama))
+ (name nodrama)
+ (private_modules runtime_files))
+
+(rule
+ (deps
+  (glob_files ../runtime/*.{s,c}))
+ (action
+  (with-stdout-to
+   runtime_files.ml
+   (run gen/embed.exe %{deps}))))

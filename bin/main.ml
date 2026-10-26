@@ -3,7 +3,8 @@ open Cmdliner
 
 let ( let* ) = Result.bind
 
-type stage = Tokens | Ast | Image | Asm
+type stage = Tokens | Ast | Image | Asm | Exe
+type destination = Stdout | File of string
 
 let read_source path =
   Source.read_file path
@@ -43,11 +44,11 @@ let print_image image =
     (Assembler.symbols image);
   List.init (Assembler.size image) Fun.id |> List.iter (print_word image)
 
-let write output image =
+let write_asm destination image =
   let emit ppf = Format.fprintf ppf "%a@?" Emit.program image in
-  match output with
-  | None -> Ok (emit Format.std_formatter)
-  | Some path -> (
+  match destination with
+  | Stdout -> Ok (emit Format.std_formatter)
+  | File path -> (
       match Out_channel.open_text path with
       | exception Sys_error reason ->
           Error [ Diagnostic.error "cannot write %s: %s" path reason ]
@@ -56,23 +57,50 @@ let write output image =
             ~finally:(fun () -> Out_channel.close oc)
             (fun () -> Ok (emit (Format.formatter_of_out_channel oc))))
 
-let compile ~stage ~output input =
+let destination ~ext ~input = function
+  | Some "-" -> Ok Stdout
+  | Some path -> Ok (File path)
+  | None -> (
+      match
+        Filename.chop_suffix_opt ~suffix:".dra" (Filename.basename input)
+      with
+      | Some base -> Ok (File (base ^ ext))
+      | None ->
+          Error
+            [
+              Diagnostic.error
+                ~notes:[ "name the output with -o" ]
+                "cannot derive an output name from %s" input;
+            ])
+
+let assemble source =
+  let* lines = Lexer.lines source |> Parser.parse in
+  Assembler.assemble lines
+
+let compile ~stage ~output ~cc input =
   let* source = read_source input in
   match stage with
   | Tokens -> print_tokens source
   | Ast -> Lexer.lines source |> Parser.parse |> Result.map print_ast
-  | Image ->
-      let* lines = Lexer.lines source |> Parser.parse in
-      Assembler.assemble lines |> Result.map print_image
+  | Image -> assemble source |> Result.map print_image
   | Asm ->
-      let* lines = Lexer.lines source |> Parser.parse in
-      let* image = Assembler.assemble lines in
-      write output image
+      let* destination = destination ~ext:".s" ~input output in
+      let* image = assemble source in
+      write_asm destination image
+  | Exe -> (
+      let* destination = destination ~ext:"" ~input output in
+      let* image = assemble source in
+      match destination with
+      | Stdout ->
+          Error
+            [ Diagnostic.error "cannot write an executable to standard output" ]
+      | File path ->
+          Link.executable ~cc ~output:path (fun ppf -> Emit.program ppf image))
 
 let exit_diagnostics = 1
 
-let run stage output input =
-  match compile ~stage ~output input with
+let run stage output cc input =
+  match compile ~stage ~output ~cc input with
   | Ok () -> Cmd.Exit.ok
   | Error diagnostics ->
       List.iter (Format.eprintf "%a@." Diagnostic.pp) diagnostics;
@@ -82,29 +110,43 @@ let stage =
   let stop_after name doc = Arg.info [ name ] ~doc in
   Arg.(
     value
-    & vflag Asm
+    & vflag Exe
         [
           (Tokens, stop_after "tokens" "Print the tokens of each line and stop.");
           (Ast, stop_after "ast" "Print the parsed program and stop.");
-          (Image, stop_after "image" "Print the assembled image and stop.");
+          ( Image,
+            stop_after "image" "Print the assembled memory image and stop." );
+          (Asm, stop_after "S" "Write RISC-V assembly instead of an executable.");
         ])
 
 let output =
-  let doc = "Write the assembly to $(docv) instead of stdout." in
+  let doc =
+    "Write the output to $(docv). With $(b,-S), $(b,-) means standard output. \
+     The default is the input's name without $(b,.dra), plus $(b,.s) with \
+     $(b,-S), in the current directory."
+  in
   Arg.(value & opt (some filepath) None & info [ "o" ] ~docv:"FILE" ~doc)
+
+let cc =
+  let doc = "The RISC-V Linux cross compiler used to link the executable." in
+  let env = Cmd.Env.info "NODRAMA_CC" in
+  Arg.(
+    value
+    & opt string "riscv64-linux-gnu-gcc"
+    & info [ "cc" ] ~env ~docv:"CMD" ~doc)
 
 let input =
   let doc = "The DRAMA source file." in
   Arg.(required & pos 0 (some filepath) None & info [] ~docv:"FILE" ~doc)
 
 let cmd =
-  let doc = "compile DRAMA to RISC-V assembly" in
+  let doc = "compile DRAMA to a RISC-V Linux executable" in
   let exits =
     Cmd.Exit.info exit_diagnostics ~doc:"on compilation errors."
     :: Cmd.Exit.defaults
   in
   Cmd.make
     (Cmd.info "nodrama" ~doc ~exits)
-    Term.(const run $ stage $ output $ input)
+    Term.(const run $ stage $ output $ cc $ input)
 
 let () = exit (Cmd.eval' cmd)
