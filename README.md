@@ -11,11 +11,12 @@ into data don't yet, and the runtime stops with an error when that happens.
 
 ## Building
 
-You need OCaml (5.x) with dune, plus a RISC-V cross toolchain and qemu to run the
-output. On Arch:
+You need OCaml 5.1 or newer with opam. To link and run the programs it produces, you
+also need a RISC-V Linux cross compiler and qemu:
 
 ```sh
-pacman -S riscv64-linux-gnu-gcc qemu-user
+pacman -S riscv64-linux-gnu-gcc qemu-user           # Arch
+apt install gcc-riscv64-linux-gnu qemu-user         # Debian/Ubuntu
 ```
 
 Then:
@@ -23,37 +24,38 @@ Then:
 ```sh
 git clone https://github.com/Vigintillionn/nodrama.git
 cd nodrama
+opam install . --deps-only
 dune build
 ```
 
-If you want `nodrama` on your path, run `dune install`. Otherwise use
-`dune exec nodrama --`.
+Run `dune install` to put `nodrama` on your path. The runtime is built into the
+binary, so it works from any directory. Otherwise use `dune exec nodrama --`.
 
 ## Usage
 
-Compile a program to assembly:
-
 ```sh
-nodrama -o sum.s examples/sum.dra
-```
-
-Link it with the runtime and run it:
-
-```sh
-riscv64-linux-gnu-gcc -static -Iruntime -o sum sum.s runtime/interp_shim.s runtime/runtime.c
+nodrama examples/sum.dra
 qemu-riscv64 ./sum
 ```
 
-This should print `145`.
+This should print `145`. The executable is named after the input, in the current
+directory. Use `-o` to pick another name.
 
-Without `-o` the assembly goes to stdout. There are also some flags to stop partway
-through, which help when debugging:
+```
+-o FILE     write the output to FILE
+-S          write RISC-V assembly (sum.s) instead of an executable; -o - for stdout
+--cc CMD    cross compiler used for linking (default riscv64-linux-gnu-gcc, or set NODRAMA_CC)
+```
+
+There are also some flags to stop partway through, which help when debugging:
 
 ```
 --tokens   print the tokens of each line
 --ast      print the parsed program
 --image    print the symbol table and the assembled memory image
 ```
+
+`nodrama --help` shows everything.
 
 ## DRAMA in short
 
