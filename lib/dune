@@ -4,7 +4,7 @@
 
 (rule
  (deps
-  (glob_files ../runtime/*.{s,c}))
+  (glob_files ../runtime/*.{s,c,h}))
  (action
   (with-stdout-to
    runtime_files.ml

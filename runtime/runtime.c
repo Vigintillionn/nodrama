@@ -1,9 +1,5 @@
-#include <stdint.h>
 #include <stddef.h>
-
-#define MEM_SIZE 10000
-#define MOD10 10000000000LL /* 10^10 */
-#define HALF (MOD10 / 2)    /* values live in [-HALF, HALF) */
+#include "runtime.h"
 
 #define CHAR_BASE 1000 /* 3 decimal digits per char */
 #define CHARS_PER_CELL 3
@@ -18,8 +14,6 @@
 long __sys_read(int fd, void *buf, size_t len);
 long __sys_write(int fd, const void *buf, size_t len);
 _Noreturn void __sys_exit(int status);
-
-extern int64_t drama_mem[MEM_SIZE];
 
 static void write_all(int fd, const char *p, size_t len)
 {
@@ -74,7 +68,7 @@ static char *format_int(char *end, int64_t v)
     return p;
 }
 
-static _Noreturn void fatal(const char *msg, long long v)
+_Noreturn void fatal(const char *msg, long long v)
 {
     char num[INT_CHARS];
     char *end = num + sizeof num;
@@ -108,15 +102,6 @@ static int next_byte(void)
 
 static int is_blank(int c) { return c == ' ' || c == '\t' || c == '\r'; }
 static int is_digit(int c) { return c >= '0' && c <= '9'; }
-
-static int64_t wrap10(int64_t x)
-{
-    if (x >= HALF)
-        return x - MOD10;
-    if (x < -HALF)
-        return x + MOD10;
-    return x;
-}
 
 int64_t __drama_mul_wide(int64_t a, int64_t b)
 {
@@ -212,17 +197,4 @@ _Noreturn void __drama_stp(void)
 _Noreturn void __drama_err_div0(int64_t addr)
 {
     fatal("Deling door nul op adres", addr);
-}
-
-struct drama_state
-{
-    int64_t cc;
-    int64_t r[10];
-};
-extern struct drama_state drama_state;
-extern int64_t drama_pool[4];
-
-_Noreturn void __drama_interp(int64_t bt)
-{
-    fatal("Zelfmodificerende code of sprong naar data van niet ondersteund adres", bt);
 }

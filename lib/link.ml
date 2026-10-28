@@ -33,9 +33,14 @@ let with_temp_dir f =
       Error [ Diagnostic.error "cannot create temp dir: %s" reason ]
   | dir -> Fun.protect ~finally:(fun () -> remove_dir dir) (fun () -> f dir)
 
+let is_source name = List.exists (Filename.check_suffix name) [ ".c"; ".s" ]
+
 let command ~cc ~output dir =
   let path = Filename.concat dir in
-  let runtime = List.map (fun (name, _) -> path name) Runtime_files.files in
+  let runtime =
+    Runtime_files.files |> List.map fst |> List.filter is_source
+    |> List.map path
+  in
   Filename.quote_command cc
     (flags @ [ "-I"; dir; "-o"; output; path program ] @ runtime @ [ "-lgcc" ])
 
