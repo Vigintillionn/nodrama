@@ -1,0 +1,22 @@
+| Generates a subroutine at run time, one OPT R0, TABLE+i per entry and then
+| a KTG, and calls it. CODE held no instructions at compile time, so the call
+| lands in the interpreter.
+
+        HIA     R1, ADD         | R1 = the word of OPT R0, TABLE
+        HIA.w   R2, 0           | R2 = words emitted
+EMIT:   BIG     R1, CODE(R2+)
+        OPT.w   R1, 1           | next entry: address field + 1
+        VGL.w   R2, 5
+        VSP     KL, EMIT
+        HIA     R1, RETURN
+        BIG     R1, CODE(R2)    | close it with a KTG
+        HIA.w   R0, 0
+        SBR     CODE            | R0 = sum of TABLE
+        DRU
+        NWL
+        STP
+
+ADD:    OPT     R0, TABLE       | templates, only read as data
+RETURN: KTG
+TABLE:  12; -4; 30; 7; 100
+CODE:   RESGR   6
